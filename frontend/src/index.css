@@ -1051,12 +1051,16 @@ h3 {
   border-left-color: #4a90e2;
 }
 
-.agenda-card.status-confirmed {
+.agenda-card.status-accepted {
   border-left-color: var(--highlight);
 }
 
-.agenda-card.status-finished {
+.agenda-card.status-completed {
   border-left-color: #666;
+}
+
+.agenda-card.status-rejected {
+  border-left-color: #e67e22;
 }
 
 .agenda-card.status-cancelled {
@@ -1099,19 +1103,65 @@ h3 {
   color: var(--light-text);
 }
 
-.status-badge-agenda.status-confirmed {
+.status-badge-agenda.status-accepted {
   background-color: var(--highlight);
   color: var(--dark-bg);
 }
 
-.status-badge-agenda.status-finished {
+.status-badge-agenda.status-completed {
   background-color: #666;
+  color: var(--light-text);
+}
+
+.status-badge-agenda.status-rejected {
+  background-color: #e67e22;
   color: var(--light-text);
 }
 
 .status-badge-agenda.status-cancelled {
   background-color: #e74c3c;
   color: var(--light-text);
+}
+
+.agenda-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-agenda {
+  border: none;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-agenda:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+}
+
+.btn-agenda:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.btn-accept {
+  background-color: var(--highlight);
+  color: var(--dark-bg);
+}
+
+.btn-reject {
+  background-color: #e67e22;
+  color: #fff;
+}
+
+.btn-complete {
+  background-color: #2ecc71;
+  color: #0f1b25;
 }
 
 .agenda-card-body {

@@ -8,5 +8,6 @@ router.get("/", auth, appointmentController.listForUser);
 router.get("/all", auth, appointmentController.listAll);
 router.get("/occupied-slots", auth, appointmentController.getOccupiedSlots);
 router.delete("/:id", auth, appointmentController.cancel);
+router.patch("/:id/status", auth, appointmentController.updateStatus);
 
 module.exports = router;

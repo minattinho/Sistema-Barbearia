@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-toastify';
+import { api } from '../api';
 
-function ProfilePage({ user, onLogout }) {
+function ProfilePage({ user, onLogout, onProfileUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || ''
   });
+
+  const avatarLetter = useMemo(() => profileData.name?.charAt(0)?.toUpperCase() || '?', [profileData.name]);
 
   useEffect(() => {
     if (user) {
@@ -23,10 +27,36 @@ function ProfilePage({ user, onLogout }) {
     setProfileData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleProfileSave = (e) => {
+  const handleProfileSave = async (e) => {
     e.preventDefault();
-    toast.success('Perfil atualizado com sucesso!');
-    setIsEditing(false);
+    if (!profileData.name.trim()) {
+      toast.error('Informe seu nome');
+      return;
+    }
+    if (!profileData.email.trim()) {
+      toast.error('Informe seu email');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const updated = await api.put('/api/users/me', {
+        name: profileData.name.trim(),
+        email: profileData.email.trim(),
+      });
+
+      toast.success('Perfil atualizado com sucesso!');
+      setIsEditing(false);
+      onProfileUpdate?.(updated);
+    } catch (err) {
+      console.error(err);
+      const message = err.status === 409
+        ? 'Este email já está em uso'
+        : (err.message || 'Erro ao atualizar perfil');
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePasswordSave = (e) => {
@@ -42,15 +72,35 @@ function ProfilePage({ user, onLogout }) {
           <h3>Editar Perfil</h3>
           <div className="form-group">
             <label htmlFor="name">NOME:</label>
-            <input type="text" id="name" name="name" value={profileData.name} onChange={handleProfileChange} />
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={profileData.name}
+              onChange={handleProfileChange}
+              required
+              disabled={isSaving}
+            />
           </div>
           <div className="form-group">
             <label htmlFor="email">EMAIL:</label>
-            <input type="email" id="email" name="email" value={profileData.email} onChange={handleProfileChange} />
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={profileData.email}
+              onChange={handleProfileChange}
+              required
+              disabled={isSaving}
+            />
           </div>
           <div className="form-actions-profile">
-            <button type="submit" className="btn btn-red">Salvar Alterações</button>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)}>Cancelar</button>
+            <button type="submit" className="btn btn-red" disabled={isSaving}>
+              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)} disabled={isSaving}>
+              Cancelar
+            </button>
           </div>
         </form>
       );
@@ -80,9 +130,9 @@ function ProfilePage({ user, onLogout }) {
   return (
     <div className="profile-container">
       <div className="profile-header">
-        <div className="profile-avatar">{profileData.name.charAt(0)}</div>
-        <h2>{profileData.name}</h2>
-        <p>{profileData.email}</p>
+        <div className="profile-avatar">{avatarLetter}</div>
+        <h2>{profileData.name || 'Seu nome'}</h2>
+        <p>{profileData.email || 'Seu email'}</p>
       </div>
 
       <div className="profile-body">

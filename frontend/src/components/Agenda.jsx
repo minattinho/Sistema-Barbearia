@@ -67,9 +67,10 @@ function Agenda() {
 
   const getStatusLabel = (status) => {
     const statusMap = {
-      scheduled: "Agendado",
-      confirmed: "Confirmado",
-      finished: "Finalizado",
+      scheduled: "Aguardando",
+      accepted: "Aceito",
+      rejected: "Recusado",
+      completed: "Concluído",
       cancelled: "Cancelado",
     };
     return statusMap[status] || status;
@@ -78,11 +79,68 @@ function Agenda() {
   const getStatusClass = (status) => {
     const classMap = {
       scheduled: "status-scheduled",
-      confirmed: "status-confirmed",
-      finished: "status-finished",
+      accepted: "status-accepted",
+      rejected: "status-rejected",
+      completed: "status-completed",
       cancelled: "status-cancelled",
     };
     return classMap[status] || "";
+  };
+
+  const handleStatusChange = async (appointmentId, nextStatus) => {
+    try {
+      await api.patch(`/api/appointments/${appointmentId}/status`, {
+        status: nextStatus,
+      });
+
+      setAppointments((current) =>
+        current.map((appt) =>
+          appt.id === appointmentId ? { ...appt, status: nextStatus } : appt
+        )
+      );
+      toast.success(`Agendamento ${getStatusLabel(nextStatus).toLowerCase()}.`);
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      toast.error(
+        error?.message || "Não foi possível atualizar o status do agendamento."
+      );
+    }
+  };
+
+  const renderActions = (appt) => {
+    if (appt.status === "scheduled") {
+      return (
+        <div className="agenda-actions">
+          <button
+            className="btn-agenda btn-accept"
+            onClick={() => handleStatusChange(appt.id, "accepted")}
+          >
+            Aceitar
+          </button>
+          <button
+            className="btn-agenda btn-reject"
+            onClick={() => handleStatusChange(appt.id, "rejected")}
+          >
+            Recusar
+          </button>
+        </div>
+      );
+    }
+
+    if (appt.status === "accepted") {
+      return (
+        <div className="agenda-actions">
+          <button
+            className="btn-agenda btn-complete"
+            onClick={() => handleStatusChange(appt.id, "completed")}
+          >
+            Finalizar atendimento
+          </button>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const today = new Date().toISOString().split("T")[0];
@@ -165,6 +223,7 @@ function Agenda() {
                     )}
                   </div>
                 )}
+                {renderActions(appt)}
               </div>
             </div>
           ))}
