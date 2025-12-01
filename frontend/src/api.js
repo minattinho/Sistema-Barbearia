@@ -33,6 +33,7 @@ export const api = {
   get: (path, opts) => request(path, Object.assign({ method: 'GET' }, opts)),
   post: (path, body, opts) => request(path, Object.assign({ method: 'POST', body: body instanceof FormData ? body : JSON.stringify(body) }, opts)),
   put: (path, body, opts) => request(path, Object.assign({ method: 'PUT', body: body instanceof FormData ? body : JSON.stringify(body) }, opts)),
+  patch: (path, body, opts) => request(path, Object.assign({ method: 'PATCH', body: body instanceof FormData ? body : JSON.stringify(body) }, opts)),
   del: (path, opts) => request(path, Object.assign({ method: 'DELETE' }, opts)),
 };
 

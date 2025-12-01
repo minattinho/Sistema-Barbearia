@@ -5,6 +5,7 @@ const mapAppointment = (row) => {
     id: row.id,
     userId: row.user_id,
     serviceId: row.service_id,
+    barberId: row.barbeiro_id,
     scheduledAt: row.scheduled_at,
     status: row.status,
   };
@@ -26,6 +27,22 @@ const mapAppointment = (row) => {
   }
 
   return appointment;
+};
+
+const ensureBarberRole = async (userId) => {
+  const { data: user, error } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if (error || !user || user.role !== "barbeiro") {
+    const err = new Error("Not allowed");
+    err.status = 403;
+    throw err;
+  }
+
+  return user;
 };
 
 exports.create = async (req, res) => {
@@ -102,7 +119,7 @@ exports.create = async (req, res) => {
         scheduled_at: finalDate.toISOString(),
         status: "scheduled",
       })
-      .select("id, user_id, service_id, scheduled_at, status")
+      .select("id, user_id, service_id, barbeiro_id, scheduled_at, status")
       .single();
 
     if (insertError) throw insertError;
@@ -122,6 +139,7 @@ exports.listForUser = async (req, res) => {
         id,
         user_id,
         service_id,
+        barbeiro_id,
         scheduled_at,
         status,
         services (
@@ -145,16 +163,7 @@ exports.listForUser = async (req, res) => {
 
 exports.listAll = async (req, res) => {
   try {
-    // Verificar se o usuário é barbeiro
-    const { data: user, error: userError } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", req.userId)
-      .single();
-
-    if (userError || !user || user.role !== "barbeiro") {
-      return res.status(403).json({ message: "Not allowed" });
-    }
+    await ensureBarberRole(req.userId);
 
     const { data: appointments, error } = await supabase
       .from("appointments")
@@ -162,6 +171,7 @@ exports.listAll = async (req, res) => {
         id,
         user_id,
         service_id,
+        barbeiro_id,
         scheduled_at,
         status,
         services (
@@ -210,7 +220,7 @@ exports.cancel = async (req, res) => {
     
     const { data: appointment, error: fetchError } = await supabase
       .from("appointments")
-      .select("id, user_id, service_id, scheduled_at, status")
+      .select("id, user_id, service_id, barbeiro_id, scheduled_at, status")
       .eq("id", id)
       .single();
 
@@ -235,6 +245,74 @@ exports.cancel = async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.updateStatus = async (req, res) => {
+  try {
+    await ensureBarberRole(req.userId);
+
+    const { id } = req.params;
+    const { status } = req.body;
+    const allowedStatuses = ["accepted", "rejected", "completed"];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const { data: appointment, error: fetchError } = await supabase
+      .from("appointments")
+      .select("id, status")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    if (appointment.status === "cancelled") {
+      return res.status(400).json({ message: "Cancelled appointments cannot be updated" });
+    }
+
+    if (status !== "completed" && appointment.status !== "scheduled") {
+      return res.status(400).json({ message: "Only scheduled appointments can be accepted or rejected" });
+    }
+
+    if (status === "completed" && appointment.status !== "accepted") {
+      return res.status(400).json({ message: "Somente agendamentos aceitos podem ser finalizados" });
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from("appointments")
+      .update({ status, barbeiro_id: req.userId })
+      .eq("id", id)
+      .select(
+        "id, user_id, service_id, barbeiro_id, scheduled_at, status, services (id, name, price, duration_minutes), users (name, email)"
+      )
+      .single();
+
+    if (updateError) {
+      // Normalizar erros de constraint do banco para mensagens compreensíveis
+      if (
+        updateError?.code === "23514" ||
+        /check constraint/.test(updateError?.message || "")
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Status inválido no banco. Atualize o schema (SUPABASE) para incluir accepted/rejected/completed.",
+          });
+      }
+
+      throw updateError;
+    }
+
+    return res.json(mapAppointment(updated));
+  } catch (err) {
+    console.error(err);
+    const status = err.status || 500;
+    return res.status(status).json({ message: err.message || "Server error" });
   }
 };
 

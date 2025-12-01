@@ -63,21 +63,21 @@ function MyAppointmentsPage({ user, barbeiro, activeModule = "agenda" }) {
           service: "Cabelo + Barba + Sombrancelha",
           date: "15/10/2025",
           time: "18:30",
-          status: "confirmed",
+          status: "accepted",
         },
         {
           id: 2,
           service: "Corte de Cabelo",
           date: "20/09/2025",
           time: "16:00",
-          status: "finished",
+          status: "completed",
         },
         {
           id: 3,
           service: "Corte de Barba",
           date: "01/09/2025",
           time: "11:00",
-          status: "finished",
+          status: "completed",
         },
       ];
   const [appointments, setAppointments] = useState(initialAppointments);
@@ -120,8 +120,8 @@ function MyAppointmentsPage({ user, barbeiro, activeModule = "agenda" }) {
     <div className="page-content">
       <h1 className="page-title">Meus Horários</h1>
       <div className="appointments-list">
-        {appointments.filter((a) => a.status === "confirmed").length === 0 &&
-          appointments.filter((a) => a.status === "finished").length > 0 && (
+        {appointments.filter((a) => a.status === "accepted").length === 0 &&
+          appointments.filter((a) => a.status === "completed").length > 0 && (
             <p className="info-message">
               Você não possui agendamentos futuros.
             </p>
@@ -142,9 +142,9 @@ function MyAppointmentsPage({ user, barbeiro, activeModule = "agenda" }) {
             </div>
             <div className="card-footer">
               <span className="status-badge">
-                {appt.status === "confirmed" ? "Confirmado" : "Finalizado"}
+                {appt.status === "accepted" ? "Confirmado" : "Finalizado"}
               </span>
-              {appt.status === "confirmed" && (
+              {appt.status === "accepted" && (
                 <button
                   className="btn-cancel"
                   onClick={() => handleCancel(appt.id)}
