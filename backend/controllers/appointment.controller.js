@@ -186,12 +186,18 @@ exports.listAll = async (req, res) => {
 
     if (error) throw error;
 
+    if (!appointments?.length) {
+      return res.json([]);
+    }
+
     // Buscar dados dos clientes separadamente
-    const userIds = [...new Set(appointments.map(a => a.user_id))];
-    const { data: users } = await supabase
+    const userIds = [...new Set(appointments.map((a) => a.user_id))];
+    const { data: users, error: usersError } = await supabase
       .from("users")
       .select("id, name, email")
       .in("id", userIds);
+
+    if (usersError) throw usersError;
 
     // Combinar dados
     const usersMap = new Map(users?.map(u => [u.id, u]) || []);

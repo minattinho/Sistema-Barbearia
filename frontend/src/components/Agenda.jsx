@@ -99,7 +99,9 @@ function Agenda() {
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
       toast.error(
-        error?.message || "Não foi possível atualizar o status do agendamento."
+        error?.data?.message ||
+          error?.message ||
+          "Não foi possível atualizar o status do agendamento."
       );
     } finally {
       setUpdatingId(null);
