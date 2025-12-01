@@ -28,6 +28,20 @@ const mapAppointment = (row) => {
   return appointment;
 };
 
+const ensureBarberRole = async (userId) => {
+  const { data: user, error: userError } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if (userError || !user || user.role !== "barbeiro") {
+    return { allowed: false };
+  }
+
+  return { allowed: true };
+};
+
 exports.create = async (req, res) => {
   console.log(`📅 Create appointment: ${JSON.stringify(req.body)}`);
   try {
@@ -198,6 +212,60 @@ exports.listAll = async (req, res) => {
     });
 
     return res.json(appointmentsWithClients);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.updateStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, barbeiroId } = req.body;
+
+    const { allowed } = await ensureBarberRole(req.userId);
+    if (!allowed) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    const allowedStatuses = ["accepted", "rejected", "completed"];
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const updates = { status };
+    updates.barbeiro_id = barbeiroId || req.userId;
+
+    const { data: updated, error: updateError } = await supabase
+      .from("appointments")
+      .update(updates)
+      .eq("id", id)
+      .select(`
+        id,
+        user_id,
+        service_id,
+        scheduled_at,
+        status,
+        services (
+          id,
+          name,
+          price,
+          duration_minutes
+        ),
+        users (
+          name,
+          email
+        )
+      `)
+      .single();
+
+    if (updateError) throw updateError;
+
+    if (!updated) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    return res.json(mapAppointment(updated));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error" });

@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public.appointments (
   service_id UUID NOT NULL REFERENCES public.services(id) ON DELETE CASCADE,
   barbeiro_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   scheduled_at TIMESTAMP WITH TIME ZONE NOT NULL,
-  status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'accepted', 'rejected', 'completed', 'cancelled')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -80,6 +80,24 @@ CREATE POLICY "Users can create own appointments"
 CREATE POLICY "Users can update own appointments"
   ON public.appointments FOR UPDATE
   USING (auth.uid() = user_id);
+
+CREATE POLICY "Barbeiros can manage appointments"
+  ON public.appointments FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.users
+      WHERE users.id = auth.uid() AND users.role = 'barbeiro'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.users
+      WHERE users.id = auth.uid() AND users.role = 'barbeiro'
+    )
+    AND (
+      NEW.barbeiro_id IS NULL OR NEW.barbeiro_id = auth.uid()
+    )
+  );
 
 -- Barbeiros podem ver todos os agendamentos
 CREATE POLICY "Barbeiros can view all appointments"
